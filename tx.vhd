@@ -3,6 +3,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+--SVN ting tjek
+
 entity tx_func is
 	port(	clk, reset : in std_logic;
 			data : in std_logic_vector(7 downto 0);
