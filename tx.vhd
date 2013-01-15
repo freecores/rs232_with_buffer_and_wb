@@ -3,10 +3,10 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
-entity tx_func_v1 is
+entity tx_func is
 	port(	clk, reset : in std_logic;
 			data : in std_logic_vector(7 downto 0);
-			new_data : in std_logic;
+			transmit_data : in std_logic;
 			
 			word_width : in std_logic_vector(3 downto 0);
 			baud_period : in std_logic_vector(15 downto 0);
@@ -16,12 +16,13 @@ entity tx_func_v1 is
 
 			tx : out std_logic;
 			sending : out std_logic);
-end entity tx_func_v1;
+end entity tx_func;
 
 
-architecture behaviour of tx_func_v1 is
+architecture behaviour of tx_func is
 	type state_type is (idle, start_bit, data_bit0, data_bit1, data_bit2, data_bit3, data_bit4, data_bit5, data_bit6, data_bit7, parity_bit, stop_bit1, stop_bit2);
-	signal current_state, next_state : state_type;
+	signal current_state : state_type := idle;
+	signal next_state : state_type;
 
 	signal register_enable : std_logic;
 
@@ -31,12 +32,13 @@ architecture behaviour of tx_func_v1 is
 	signal next_state_from_data_bit7	: state_type;
 	signal next_state_from_stop_bit1	: state_type;
 
-	signal baud_tick : std_logic;
-	signal baud_counter_d, baud_counter_q : std_logic_vector(15 downto 0) := (others => '0');
+	signal baud_tick : std_logic := '0';
+	signal baud_counter_d : std_logic_vector(15 downto 0);
+	signal baud_counter_q : std_logic_vector(15 downto 0) := (others => '0');
 
 	signal cal_parity_bit : std_logic;
 	
-	signal data_q : std_logic_vector(7 downto 0);
+	signal data_q : std_logic_vector(7 downto 0) := (others => '0');
 
 begin
 -----------------------
@@ -53,21 +55,21 @@ begin
 						next_state_from_data_bit4 	when data_bit4,
 						next_state_from_data_bit5 	when data_bit5,
 						next_state_from_data_bit6 	when data_bit6,
-						next_state_from_stop_bit1 	when data_bit7,
-						stop_bit2 					when stop_bit1,
+						next_state_from_data_bit7 	when data_bit7,
+						next_state_from_stop_bit1	when stop_bit1,
 						idle						when stop_bit2,
 						idle						when others;
 
 	next_state_from_data_bit4 <= parity_bit when word_width = "0101" and use_parity_bit = '1' else
-								 stop_bit1	when word_width = "0101" else
+								 stop_bit1	when word_width = "0101" and use_parity_bit = '0' else
 								 data_bit5;
 
 	next_state_from_data_bit5 <= parity_bit when word_width = "0110" and use_parity_bit = '1' else
-								 stop_bit1	when word_width = "0110" else
+								 stop_bit1	when word_width = "0110" and use_parity_bit = '0' else
 								 data_bit6;
 
 	next_state_from_data_bit6 <= parity_bit when word_width = "0111" and use_parity_bit = '1' else
-								 stop_bit1	when word_width = "0111" else
+								 stop_bit1	when word_width = "0111" and use_parity_bit = '0' else
 								 data_bit7;
 	
 	next_state_from_data_bit7 <= parity_bit when use_parity_bit = '1' else
@@ -78,7 +80,7 @@ begin
 
 	--Baud logic
 	baud_tick <= '1' when baud_counter_q = baud_period else '0';
-	baud_counter_d <= 	baud_counter_q + 1 when reset = '0' and baud_tick = '0' else
+	baud_counter_d <= 	baud_counter_q + 1 when baud_tick = '0' and current_state /= idle else
 						"0000000000000001";
 
 	--Parity_bit logic
@@ -107,7 +109,7 @@ begin
 ------------------
 --Register logic
 ------------------
-	register_enable <= new_data or baud_tick;
+	register_enable <= transmit_data or baud_tick;
 
 	register_logic : process(clk, reset)
 	begin
@@ -120,12 +122,12 @@ begin
 			end if;
 			
 			--BAUD Counter Control
-			if current_state /= idle or new_data = '1' then
+			if current_state /= idle or (current_state = idle and transmit_data = '1')then
 				baud_counter_q <= baud_counter_d;
 			end if;
 			
 			--DATA control
-			if current_state = idle and new_data = '1' then
+			if current_state = idle and transmit_data = '1' then
 				data_q <= data;
 			end if;
 			
