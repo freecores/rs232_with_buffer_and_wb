@@ -8,10 +8,10 @@ end rs232_tx_tb;
 
 architecture behaviour of rs232_tx_tb is
 
-	component tx_func_v1 is
+	component tx_func is
 	port(	clk, reset : in std_logic;
 			data : in std_logic_vector(7 downto 0);
-			new_data : in std_logic;
+			transmit_data : in std_logic;
 			
 			word_width : in std_logic_vector(3 downto 0);
 			baud_period : in std_logic_vector(15 downto 0);
@@ -27,7 +27,7 @@ architecture behaviour of rs232_tx_tb is
 	signal reset : std_logic := '0';	
 	constant clk_period : time := 2 ns;	-- 50MHz
 	
-	signal new_data : std_logic := '0';
+	signal transmit_data : std_logic := '0';
 	signal word_width : std_logic_vector(3 downto 0) := "1000";
 	signal baud_period : std_logic_vector(15 downto 0) := "0000000000001000";
 	signal use_parity_bit : std_logic := '0';
@@ -39,7 +39,7 @@ architecture behaviour of rs232_tx_tb is
 
 begin
 
-	uut : tx_func_v1 port map (clk, reset, "10110010", new_data, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, tx, sending);
+	uut : tx_func port map (clk, reset, "10100101", transmit_data, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, tx, sending);
 	
 	clk_process : process
 	begin
@@ -57,13 +57,13 @@ begin
 		wait for 5 ns;
 		reset <= '0';
 		wait for 4 ns;
-		new_data <= '1';
+		transmit_data <= '1';
 		wait for 2 ns;
-		new_data <= '0';
+		transmit_data <= '0';
 		wait for 180 ns;
-		new_data <= '1';
+		transmit_data <= '1';
 		wait for 2 ns;
-		new_data <= '0';
+		transmit_data <= '0';
 		wait;
 	end process;
 
