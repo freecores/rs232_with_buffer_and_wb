@@ -59,7 +59,7 @@ architecture behaviour of tb_rx is
 	signal txrx, sending : std_logic;
 	signal idle_line_lvl : std_logic := '1';
 	
-	signal tx_data : std_logic_vector(7 downto 0) := "10110010";
+	signal tx_data : std_logic_vector(7 downto 0) := "00000000";
 	signal rx_data : std_logic_vector(7 downto 0);
 
 	--specific for rx_func
@@ -70,6 +70,8 @@ architecture behaviour of tb_rx is
 	signal parity_error : std_logic;
 	signal stop_bit_error : std_logic;
 
+	signal stimuli_input	: std_logic_vector(7 downto 0) := "00000000";
+	signal expected_output 	: std_logic_vector(7 downto 0) := "00000000";
 
 begin
 
@@ -77,7 +79,6 @@ begin
 	uut0 : rx_func port map (clk, reset, rx_enable, txrx, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, start_samples, line_samples, rx_data, data_ready, parity_error, stop_bit_error);
 
 	uut1 : tx_func port map (clk, reset, tx_data, transmit_data, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, txrx, sending);
-	
 	
 	clk_process : process
 	begin
@@ -94,17 +95,54 @@ begin
 		reset <= '1';
 		wait for 5 ns;
 		reset <= '0';
-		wait for 12 ns;
-		transmit_data <= '1';
-		wait for 2 ns;
-		transmit_data <= '0';
-		wait for 704 ns;
-		tx_data <= "11001101";
-		transmit_data <= '1';
-		wait for 2 ns;
-		transmit_data <= '0';
 		wait;
 	end process;
+	
+	new_data_process : process
+	begin
+		wait until reset = '1';
+		wait until reset = '0';
+		wait for 5 ns;
+		tx_data <= "00000000";
+		transmit_data <= '1';
+		wait for 2 ns;
+		transmit_data <= '0';
+		
+		
+		while stimuli_input /= "11111111" loop
+			wait until sending = '0';
+			wait for 12 ns;
 
+			tx_data <= tx_data + '1';
+			transmit_data <= '1';
+			wait for 2 ns;
+			transmit_data <= '0';
+		end loop;
+		
+		wait;		
+	end process;
+	
+	data_check : process
+	begin
+		wait until data_ready = '1';
+			assert rx_data = expected_output report "Not expected output" severity warning;
+		wait until data_ready = '0';
+		expected_output <= expected_output + 1;
+		
+		if expected_output = "11111111" then
+			wait until data_ready = '1';
+			assert rx_data = expected_output report "Not expected output" severity warning;
+			wait until data_ready = '0';
+			wait for 100 ns;
+			assert false report "None - end of simulation" severity failure;
+		end if;
+	end process;
 
+	protocol_error : process
+	begin
+		wait for 1 ns;
+		assert parity_error = '0' report "Stob bit error" severity error;
+		assert stop_bit_error = '0' report "Stob bit error" severity error;
+	end process;
+	
 end behaviour;
