@@ -122,7 +122,7 @@ begin
 								sample_reg_start_bit_q		when reset = '0' else
 								"0000";
 
---Parity bit calculation
+--Parity bit
 	with current_state select
 		xored_sampled_data_bit_d	<= 	'0' when idle,
 										xored_sampled_data_bit_q when stop_bit1,
