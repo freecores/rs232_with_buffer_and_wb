@@ -56,6 +56,7 @@ begin
 						next_state_from_data_bit5 	when data_bit5,
 						next_state_from_data_bit6 	when data_bit6,
 						next_state_from_data_bit7 	when data_bit7,
+						stop_bit1					when parity_bit,
 						next_state_from_stop_bit1	when stop_bit1,
 						idle						when stop_bit2,
 						idle						when others;
@@ -109,7 +110,8 @@ begin
 ------------------
 --Register logic
 ------------------
-	register_enable <= transmit_data or baud_tick;
+	register_enable <= 	'1' when (transmit_data = '1' and current_state = idle) or baud_tick = '1' else
+						'0';
 
 	register_logic : process(clk, reset)
 	begin
