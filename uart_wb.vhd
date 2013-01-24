@@ -74,13 +74,14 @@ architecture behaviour of uart_wb is
 	signal write_reg_addr_1000				: std_logic;
 	signal reg_addr_1000_q, reg_addr_1000_d	: std_logic_vector(4 downto 0); --00001000 = xxx | rst_uart_rx | rst_uart_rx_fifo | rst_uart_tx | rst_uart_tx_fifo | rst_uart_setup
 	signal write_reg_addr_1001				: std_logic;
-	signal reg_addr_1001_q, reg_addr_1001_d	: std_logic_vector(4 downto 0) := "11111"; --00001001 = xxx | rst_uart_rx_if_rst_wb | rst_uart_rx_fifo_if_rst_wb | rst_uart_tx_if_rst_wb | rst_uart_tx_fifo_if_rst_wb | rst_uart_setup_if_rst_wb | 
+	signal reg_addr_1001_q					: std_logic_vector(4 downto 0) := "11111"; --00001001 = xxx | rst_uart_rx_if_rst_wb | rst_uart_rx_fifo_if_rst_wb | rst_uart_tx_if_rst_wb | rst_uart_tx_fifo_if_rst_wb | rst_uart_setup_if_rst_wb | 
+	signal reg_addr_1001_d					: std_logic_vector(4 downto 0);	
 	
 Begin
 -------------------------
 -- Combinational Logic --
 -------------------------
-	we_ok 			<= WE_I and STB_I and CYC_I;
+	we_ok 			<= WE_I and CYC_I;
 	ACK_O			<= STB_I;
 
 --DAT_O	asynchronous
@@ -120,9 +121,9 @@ Begin
 							DAT_I;
 	
 	baud_period			<= 	reg_addr_111_q & reg_addr_110_q;
-	write_reg_addr_101	<=	'1' when (ADR_I = "00000110" and we_ok = '1') or uart_setup_rst = '1' else
+	write_reg_addr_110	<=	'1' when (ADR_I = "00000110" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';
-	reg_addr_110_d		<= 	"00000000" when uart_setup_rst = '1' else
+	reg_addr_110_d		<= 	"00010000" when uart_setup_rst = '1' else
 							DAT_I;
 	write_reg_addr_111	<=	'1' when (ADR_I = "00000111" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';

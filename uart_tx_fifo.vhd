@@ -112,7 +112,7 @@ begin
 	begin
 		if rising_edge(clk) then
 			if ram_we = '1' then
-				ram(conv_integer(ram_address)) <= tx_data_q;
+				ram(conv_integer(ram_address)) <= tx_data; --tx_data_q
 			end if;
 		end if;
 	end process ram_control;
