@@ -12,12 +12,16 @@ entity uart_top is
 			WE_I				: in std_logic;
 			STB_I				: in std_logic;
 			CYC_I				: in std_logic;
-			DAT_O				: std_logic_vector(7 downto 0);
+			DAT_O				: out std_logic_vector(7 downto 0);
 			ACK_O				: out std_logic;
 			
 			rx					: in std_logic;
 			tx					: out std_logic;
 			
+			rx_fifo_empty		: out std_logic;
+			rx_fifo_full		: out std_logic;
+			tx_fifo_empty		: out std_logic;
+			tx_fifo_full		: out std_logic;			
 			parity_error		: out std_logic;
 			stop_bit_error		: out std_logic;
 			transmitting		: out std_logic);
@@ -36,7 +40,7 @@ architecture behaviour of uart_top is
 			STB_I					: in std_logic;
 			CYC_I					: in std_logic;
 			
-			DAT_O					: std_logic_vector(7 downto 0);
+			DAT_O					: out std_logic_vector(7 downto 0);
 			ACK_O					: out std_logic;
 			
 			--uart controll
@@ -59,7 +63,7 @@ architecture behaviour of uart_top is
 			write_tx_data			: out std_logic;
 			tx_data					: out std_logic_vector(7 downto 0);
 			
-			read_rx_data			: in std_logic;
+			read_rx_data			: out std_logic;
 			rx_data					: in std_logic_vector(7 downto 0);
 			rx_fifo_entries_free 	: in std_logic_vector (7 downto 0));
 	end component;
@@ -140,7 +144,6 @@ architecture behaviour of uart_top is
 	signal rx_func_data, tx_func_data : std_logic_vector(7 downto 0);
 	signal rx_func_data_ready, tx_func_apply_data : std_logic;
 	signal rx_enable : std_logic;
-	signal rx_fifo_empty, rx_fifo_full, tx_fifo_empty, tx_fifo_full : std_logic;
 
 begin
 	transmitting <= sending;
@@ -149,7 +152,7 @@ begin
 
 	UartRx : rx_func port map (clk, uart_rx_rst, rx_enable, rx, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, start_samples, line_samples, rx_func_data, rx_func_data_ready,parity_error,stop_bit_error);
 
-	UartTx : tx_func port map(clk, uart_tx_rst, tx_data, write_tx_data,word_width,baud_period,use_parity_bit, parity_type,stop_bits,idle_line_lvl,tx,sending);
+	UartTx : tx_func port map(clk, uart_tx_rst, tx_func_data, tx_func_apply_data,word_width,baud_period,use_parity_bit, parity_type,stop_bits,idle_line_lvl,tx,sending);
 
 	RxFifo : rx_fifo generic map(address_width) port map(clk, uart_rx_fifo_rst, read_rx_data, rx_data, rx_fifo_full, rx_fifo_empty, rx_fifo_entries_free, rx_func_data, rx_func_data_ready);
 	
