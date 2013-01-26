@@ -15,8 +15,9 @@ use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity uart_wb is
-	port(	--WB interface
+	port(	--WB interface	
 			CLK_I					: in std_logic;
+			master_rst				: in std_logic;
 			RST_I					: in std_logic;
 			ADR_I 					: in std_logic_vector(7 downto 0);
 			DAT_I					: in std_logic_vector(7 downto 0);
@@ -74,7 +75,7 @@ architecture behaviour of uart_wb is
 	signal write_reg_addr_1000				: std_logic;
 	signal reg_addr_1000_q, reg_addr_1000_d	: std_logic_vector(4 downto 0); --00001000 = xxx | rst_uart_rx | rst_uart_rx_fifo | rst_uart_tx | rst_uart_tx_fifo | rst_uart_setup
 	signal write_reg_addr_1001				: std_logic;
-	signal reg_addr_1001_q					: std_logic_vector(4 downto 0) := "11111"; --00001001 = xxx | rst_uart_rx_if_rst_wb | rst_uart_rx_fifo_if_rst_wb | rst_uart_tx_if_rst_wb | rst_uart_tx_fifo_if_rst_wb | rst_uart_setup_if_rst_wb | 
+	signal reg_addr_1001_q					: std_logic_vector(4 downto 0);-- := "11111"; --00001001 = xxx | rst_uart_rx_if_rst_wb | rst_uart_rx_fifo_if_rst_wb | rst_uart_tx_if_rst_wb | rst_uart_tx_fifo_if_rst_wb | rst_uart_setup_if_rst_wb | 
 	signal reg_addr_1001_d					: std_logic_vector(4 downto 0);	
 	
 Begin
@@ -100,7 +101,7 @@ Begin
 	rx_enable			<= reg_addr_1_q;
 	write_reg_addr_1 	<= '1' when (ADR_I = "00000001" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';
-	reg_addr_1_d		<= '1' when uart_setup_rst = '1' else
+	reg_addr_1_d		<= '0' when uart_setup_rst = '1' else
 							DAT_I(0);
 
 	idle_line_lvl 		<= 	reg_addr_100_q(7);
@@ -110,7 +111,7 @@ Begin
 	word_width			<= 	'0' & reg_addr_100_q(2 downto 0);	--the msb is missing
 	write_reg_addr_100 	<= 	'1' when (ADR_I = "00000100" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';
-	reg_addr_100_d 		<= 	"10000001" when uart_setup_rst = '1' else
+	reg_addr_100_d 		<= 	"10001000" when uart_setup_rst = '1' else
 							DAT_I;
 	
 	start_samples		<= 	reg_addr_101_q(7 downto 4);
@@ -130,11 +131,11 @@ Begin
 	reg_addr_111_d		<= 	"00000000" when uart_setup_rst = '1' else
 							DAT_I;
 
-	uart_rx_rst			<= (RST_I and reg_addr_1001_q(4)) or reg_addr_1000_q(4);	
-	uart_rx_fifo_rst	<= (RST_I and reg_addr_1001_q(3)) or reg_addr_1000_q(3);
-	uart_tx_rst			<= (RST_I and reg_addr_1001_q(2)) or reg_addr_1000_q(2);
-	uart_tx_fifo_rst	<= (RST_I and reg_addr_1001_q(1)) or reg_addr_1000_q(1);
-	uart_setup_rst		<= (RST_I and reg_addr_1001_q(0)) or reg_addr_1000_q(0);
+	uart_rx_rst			<= (RST_I and reg_addr_1001_q(4)) or reg_addr_1000_q(4) or master_rst;	
+	uart_rx_fifo_rst	<= (RST_I and reg_addr_1001_q(3)) or reg_addr_1000_q(3) or master_rst;
+	uart_tx_rst			<= (RST_I and reg_addr_1001_q(2)) or reg_addr_1000_q(2) or master_rst;
+	uart_tx_fifo_rst	<= (RST_I and reg_addr_1001_q(1)) or reg_addr_1000_q(1) or master_rst;
+	uart_setup_rst		<= (RST_I and reg_addr_1001_q(0)) or reg_addr_1000_q(0) or master_rst;
 	write_reg_addr_1000	<=	'1' when (ADR_I = "00001000" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';
 	reg_addr_1000_d		<=	"00000" when uart_setup_rst = '1' else
@@ -142,15 +143,15 @@ Begin
 	
 	write_reg_addr_1001	<=	'1' when (ADR_I = "00001001" and we_ok = '1') or uart_setup_rst = '1' else
 							'0';
-	reg_addr_1001_d		<=	"00000" when uart_setup_rst = '1' else
+	reg_addr_1001_d		<=	"11111" when uart_setup_rst = '1' else
 							DAT_I(4 downto 0);
 	
 	--Write to tx_fifo
-	write_tx_data 		<=	'1' when (ADR_I = "00000000" or ADR_I = "00000001") and we_ok = '1' else '0';
+	write_tx_data 		<=	'1' when ADR_I = "00000000" and we_ok = '1' else '0';
 	tx_data				<=	DAT_I;
 	
 	--Read from rx_fifo
-	read_rx_data		<=	'1' when (ADR_I = "00000000" or ADR_I = "00000001") and (WE_I='0' and STB_I='1' and CYC_I = '1') else '0';
+	read_rx_data		<=	'1' when ADR_I = "00000000" and (WE_I='0' and CYC_I = '1') else '0';
 
 --------------------
 -- Register Logic --
