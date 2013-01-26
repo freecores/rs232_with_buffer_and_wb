@@ -35,8 +35,6 @@ architecture behaviour of tx_fifo is
 	
 	signal tx_func_apply_data_i : std_logic;
 	
-	signal tx_data_q : std_logic_vector(7 downto 0) := (others => '0');
-	
 	
 begin
 --------------------
@@ -72,7 +70,7 @@ begin
 	tx_fifo_empty_i 		<= 	'0' when tx_entries_back_q /= max_fifo_entries else 
 								'1';
 	tx_fifo_full			<=	tx_fifo_full_i;
-	tx_fifo_full_i			<=	'0' when tx_entries_back_q /= conv_std_logic_vector(0, address_width) else
+	tx_fifo_full_i			<=	'0' when tx_entries_back_q /= conv_std_logic_vector(0, address_width+1) else
 								'1';
 
 	tx_fifo_entries_free	<=	conv_std_logic_vector(0,7-address_width) & tx_entries_back_q;
@@ -86,11 +84,7 @@ begin
 --------------------
 	reg_control : process(clk, reset, ram_we, tx_func_apply_data_i, tx_data)
 	begin
-		if rising_edge(clk) then
-			if write_tx_data = '1' then
-				tx_data_q	<= tx_data;	--could not find a enable combination which would work
-			end if;
-			
+		if rising_edge(clk) then			
 			if reset = '1' or ram_we = '1' or tx_func_apply_data_i = '1' then
 				tx_entries_back_q 	<= tx_entries_back_d;
 			end if;
@@ -108,11 +102,11 @@ begin
 -----------------------------------
 -- RAM synchronous - single port --
 -----------------------------------
-	ram_control : process(clk, ram_we, ram_address, tx_data_q)
+	ram_control : process(clk, ram_we, ram_address, tx_data)
 	begin
 		if rising_edge(clk) then
 			if ram_we = '1' then
-				ram(conv_integer(ram_address)) <= tx_data; --tx_data_q
+				ram(conv_integer(ram_address)) <= tx_data;
 			end if;
 		end if;
 	end process ram_control;
