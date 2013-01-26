@@ -5,8 +5,9 @@ use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 entity uart_top is
 	generic(address_width : integer := 3);
-	port(	clk, rst			: in std_logic;
+	port(	clk, master_rst		: in std_logic;
 			
+			RST_I				: in std_logic;
 			ADR_I 				: in std_logic_vector(7 downto 0);
 			DAT_I				: in std_logic_vector(7 downto 0);
 			WE_I				: in std_logic;
@@ -33,6 +34,7 @@ architecture behaviour of uart_top is
 	component uart_wb is
 	port(	--WB interface
 			CLK_I					: in std_logic;
+			master_rst				: in std_logic;
 			RST_I					: in std_logic;
 			ADR_I 					: in std_logic_vector(7 downto 0);
 			DAT_I					: in std_logic_vector(7 downto 0);
@@ -143,12 +145,12 @@ architecture behaviour of uart_top is
 	signal stop_bits : std_logic_vector(1 downto 0);
 	signal rx_func_data, tx_func_data : std_logic_vector(7 downto 0);
 	signal rx_func_data_ready, tx_func_apply_data : std_logic;
-	signal rx_enable : std_logic;
+	signal rx_enable: std_logic;
 
 begin
 	transmitting <= sending;
 
-	wishBoneInterFace : uart_wb port map (clk,rst,ADR_I,DAT_I,WE_I,STB_I,CYC_I,DAT_O,ACK_O,word_width,baud_period,use_parity_bit,parity_type,stop_bits,idle_line_lvl,rx_enable,start_samples,line_samples,uart_rx_rst,uart_rx_fifo_rst,uart_tx_rst,uart_tx_fifo_rst,tx_fifo_entries_free,write_tx_data,tx_data,read_rx_data,rx_data,rx_fifo_entries_free);
+	wishBoneInterFace : uart_wb port map (clk, master_rst, RST_I,ADR_I,DAT_I,WE_I,STB_I,CYC_I,DAT_O,ACK_O,word_width,baud_period,use_parity_bit,parity_type,stop_bits,idle_line_lvl,rx_enable,start_samples,line_samples,uart_rx_rst,uart_rx_fifo_rst,uart_tx_rst,uart_tx_fifo_rst,tx_fifo_entries_free,write_tx_data,tx_data,read_rx_data,rx_data,rx_fifo_entries_free);
 
 	UartRx : rx_func port map (clk, uart_rx_rst, rx_enable, rx, word_width, baud_period, use_parity_bit, parity_type, stop_bits, idle_line_lvl, start_samples, line_samples, rx_func_data, rx_func_data_ready,parity_error,stop_bit_error);
 
