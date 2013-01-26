@@ -21,7 +21,7 @@ end entity tx_func;
 
 architecture behaviour of tx_func is
 	type state_type is (idle, start_bit, data_bit0, data_bit1, data_bit2, data_bit3, data_bit4, data_bit5, data_bit6, data_bit7, parity_bit, stop_bit1, stop_bit2);
-	signal current_state : state_type := idle;
+	signal current_state : state_type;-- := idle;
 	signal next_state : state_type;
 
 	signal register_enable : std_logic;
@@ -32,13 +32,13 @@ architecture behaviour of tx_func is
 	signal next_state_from_data_bit7	: state_type;
 	signal next_state_from_stop_bit1	: state_type;
 
-	signal baud_tick : std_logic := '0';
+	signal baud_tick : std_logic;-- := '0';
 	signal baud_counter_d : std_logic_vector(15 downto 0);
-	signal baud_counter_q : std_logic_vector(15 downto 0) := (others => '0');
+	signal baud_counter_q : std_logic_vector(15 downto 0);-- := (others => '0');
 
 	signal cal_parity_bit : std_logic;
 	
-	signal data_q : std_logic_vector(7 downto 0) := (others => '0');
+	signal data_q : std_logic_vector(7 downto 0);-- := (others => '0');
 
 begin
 -----------------------
@@ -89,7 +89,7 @@ begin
 
 	--TX Line logic
 	with current_state select
-		tx <= 	idle_line_lvl 				when idle,
+		tx <= 			idle_line_lvl 		when idle,
 						not idle_line_lvl 	when start_bit,
 						data_q(0) 			when data_bit0,
 						data_q(1) 			when data_bit1,
