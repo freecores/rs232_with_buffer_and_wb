@@ -15,16 +15,6 @@ Baud rate	|	bit period	|	50Mhz 	|	100Mhz	|	200Mhz	|
 230400		|	4.34 mSec	|	217		|	434		|	868		|
 
 
-
-
-Signal		| bit
-------------|----------
-start		| 1
-data		| 5,6,7,8
-Partition	| 1
-stop		| 1, 1.5, 2
-
-
 Signals/Interrupts
 	RX Buffer empty
 	RX Buffer full
@@ -37,20 +27,16 @@ Buffers
 	TX FIFO Buffer 0-64 Word buffer
 	
 After Reset
-	50MHz 2400bps, 100MHz 4800bps
+	50MHz 2400bps, 100MHz 4800bps, 200MHz 9600bps
 	1 start bit, 8 data bit, 1 stop bit
 	
 Componenter
-	Main()
-		RS232
-			uart_rx
-			uart_tx
-		BUFFER
-			rx_fifo
-			tx_fifo
-		WishBone
-			uart_setup
-			wb_interface
+	uart_top			: top entity
+		uart_rx			: rs232 complient reciever
+		uart_tx			: rs232 complient tranmitter
+		uart_rx_fifo	: buffer for revieved data
+		uart_tx_fifo	: buffer for data to be transmitted
+		uart_wb			: WISHBONE interface
 
 Addresses
 	00000000 = rx_fifo(r)(rx_fifo_rst.u) / write tx_fifo(w)(tx_fifo_rst.u)
