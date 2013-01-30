@@ -3,6 +3,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
+use work.wb_pack.all;
+
 entity tb_uart_top is
 end tb_uart_top;
 
@@ -51,103 +53,46 @@ architecture behaviour of tb_uart_top is
 	signal sim_idle_line_lvl, sim_use_parity_bit, sim_parity_type : std_logic;
 	signal sim_baud_period 		: std_logic_vector(15 downto 0);
 	signal master_rst : std_logic;
+	
+	signal wb_master_in		: wb_master_in_type;
+	signal wb_master_out 	: wb_master_out_type;
+
 
 begin
 
 	uut : uart_top generic map (3) port map (clk, master_rst, RST_I, ADR_I, DAT_I, WE_I, STB_I, CYC_I, DAT_O, ACK_O, txrx, txrx, rx_fifo_empty, rx_fifo_full, tx_fifo_empty, tx_fifo_full);
 
-	data_in : process
-	begin
-		WE_I 	<= '0';
-		STB_I	<= '0';
-		CYC_I	<= '0';
-		DAT_I 	<= "00000000";
-		ADR_I	<= "00000000";
-	
+	wb_naive_connect(CYC_I, STB_I, ACK_O, WE_I, ADR_I, DAT_I, DAT_O, wb_master_in, wb_master_out);
+
+	read_write : process
+		variable wb_read_data		: natural;
+	begin	
 		wait until master_rst = '1';
+		wb_reset(clk, wb_master_out);
 		wait until master_rst = '0';
+		
 		--RX_Enable
-		wait until clk = '1';
-		wait for 0.1 ns;
-		WE_I 	<= '1';
-		STB_I	<= '1';
-		CYC_I	<= '1';
-		DAT_I 	<= "00000001";
-		ADR_I	<= "00000001";
-		
-		wait until ACK_O = '1';
-		wait until clk = '0';
-		
-		--Send 011001100
-		wait until clk = '1';
-		wait for 0.1 ns;
-		DAT_I 	<= "01100110";
-		ADR_I	<= "00000000";
-		
-		wait until clk = '0';
-		--Send 10011001
-		wait until clk = '1';
-		wait for 0.1 ns;
-		DAT_I 	<= "10011001";
-		
-		wait until clk = '0';
-		wait until clk = '1';
-		wait for 0.1 ns;
-		
-		STB_I	<= '0';
-		CYC_I	<= '0';
-		
-		
-		--read data
-		wait until rx_fifo_empty = '0';
-		wait until clk = '0';
-		wait until clk = '1';
-		
-		wait for 0.1 ns;
-		WE_I 	<= '0';
-		STB_I 	<= '1';
-		CYC_I	<= '1';
-		ADR_I	<= "00000000";
-		wait until ACK_O = '1';
-		wait until clk = '0';
-		wait for 0.95 ns;
-		wait until clk = '1';
-		wait for 0.1 ns;
-		STB_I 	<= '0';
-		CYC_I 	<= '0';
-		assert expected_output(0) = DAT_O'last_value
-			report "Wrong data "& integer'IMAGE(conv_integer(expected_output(0)))& " /= " & integer'IMAGE(conv_integer(DAT_O'last_value))
+		wb_read(clk, 1, wb_read_data, wb_master_in, wb_master_out);
+		assert wb_read_data = 0
+			report "wrong reset value"
 				severity error;
-	
-	
-		--read data				
-		wait until rx_fifo_empty = '0';
-		wait until clk = '0';
-		wait until clk = '1';
+		wb_confirme_write(clk, 1, 1, wb_master_in, wb_master_out);
 		
-		wait for 0.1 ns;
-		WE_I 	<= '0';
-		STB_I 	<= '1';
-		CYC_I	<= '1';
-		ADR_I	<= "00000000";
-		wait until ACK_O = '1';
-		wait until clk = '0';
-		wait until clk = '1';
-		wait for 0.1 ns;
-		STB_I 	<= '0';
-		CYC_I 	<= '0';
+		--send 01100110
+		wb_read(clk,3,wb_read_data, wb_master_in, wb_master_out);
+		while wb_read_data /= 0 loop
+			wb_write(clk, 0, 110, wb_master_in, wb_master_out);
+			wb_read(clk,3,wb_read_data, wb_master_in, wb_master_out);
+		end loop;
 		
-		assert expected_output(1) = DAT_O'last_value
-			report "Wrong data "& integer'IMAGE(conv_integer(expected_output(1)))& " /= " & integer'IMAGE(conv_integer(DAT_O'last_value))
+		wait until falling_edge(rx_fifo_empty);
+		wb_read(clk, 0, wb_read_data, wb_master_in, wb_master_out);
+		assert wb_read_data = 110
+			report "wrong data recieved"
 				severity error;
-
-
 		
 		wait;
 	end process;
-	
-	
-	
 	
 	
 	RST_I				<= '0';

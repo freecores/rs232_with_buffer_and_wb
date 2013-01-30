@@ -24,17 +24,17 @@ architecture behaviour of tx_fifo is
 
 	constant max_fifo_entries : std_logic_vector(address_width downto 0) := conv_std_logic_vector(2**address_width, address_width+1);
 	signal tx_entries_back_d : std_logic_vector(address_width downto 0);
-	signal tx_entries_back_q : std_logic_vector(address_width downto 0) := max_fifo_entries ;
+	signal tx_entries_back_q : std_logic_vector(address_width downto 0);
 	signal tx_in_addr_d, tx_out_addr_d : std_logic_vector(address_width-1 downto 0);
-	signal tx_in_addr_q, tx_out_addr_q : std_logic_vector(address_width-1 downto 0) := (others => '0');
+	signal tx_in_addr_q, tx_out_addr_q : std_logic_vector(address_width-1 downto 0);
+	signal tx_in_addr_en, tx_out_addr_en, tx_entries_back_en : std_logic;
 	
 	signal ram_we : std_logic;
-	signal ram_address : std_logic_vector(address_width-1 downto 0) := (others => '0');
+	signal ram_address : std_logic_vector(address_width-1 downto 0);
 	signal tx_fifo_empty_i : std_logic := '1';
 	signal tx_fifo_full_i : std_logic := '0';
 	
 	signal tx_func_apply_data_i : std_logic;
-	
 	
 begin
 --------------------
@@ -53,10 +53,12 @@ begin
 	ram_address 			<= 	tx_in_addr_q 		when '1',
 								tx_out_addr_q 		when '0',
 								tx_out_addr_q		when others;
-
+	
+	tx_in_addr_en			<=	reset or ram_we;
 	tx_in_addr_d			<= 	(others => '0')		when reset = '1' else
 								tx_in_addr_q + 1;-- 	when ram_we = '1' else	--taken care of by the register enable
 								--tx_in_addr_q;
+	tx_out_addr_en			<=	reset or tx_func_apply_data_i;
 	tx_out_addr_d			<= 	(others => '0') 	when reset = '1' else
 								tx_out_addr_q + 1;--	when tx_func_apply_data_i = '1' else
 								--tx_out_addr_q;
@@ -74,6 +76,7 @@ begin
 								'1';
 
 	tx_fifo_entries_free	<=	conv_std_logic_vector(0,7-address_width) & tx_entries_back_q;
+	tx_entries_back_en		<=	reset or ram_we or tx_func_apply_data_i;
 	tx_entries_back_d 		<= 	max_fifo_entries 		when reset = '1' else
 								tx_entries_back_q - 1	when ram_we = '1' else 
 								tx_entries_back_q + 1;-- 	when tx_func_apply_data_i = '1' else
@@ -82,18 +85,18 @@ begin
 --------------------
 -- Register Logic --
 --------------------
-	reg_control : process(clk, reset, ram_we, tx_func_apply_data_i, tx_data)
+	reg_control : process(clk, tx_entries_back_en, tx_out_addr_en, tx_in_addr_en, tx_entries_back_d, tx_out_addr_d, tx_in_addr_d)
 	begin
 		if rising_edge(clk) then			
-			if reset = '1' or ram_we = '1' or tx_func_apply_data_i = '1' then
+			if tx_entries_back_en = '1' then
 				tx_entries_back_q 	<= tx_entries_back_d;
 			end if;
 			
-			if reset = '1' or tx_func_apply_data_i = '1' then
+			if tx_out_addr_en = '1' then
 				tx_out_addr_q 		<= tx_out_addr_d;
 			end if;
 			
-			if reset = '1' or ram_we = '1' then
+			if tx_in_addr_en = '1' then
 				tx_in_addr_q		<= tx_in_addr_d;
 			end if;
 		end if;
