@@ -96,17 +96,21 @@ package wb_pack is
 		signal m_out : in wb_master_out_type;
 		signal s_in	: out wb_slave_in_type;
 		signal s_out : in wb_slave_out_type);
+		
+	procedure wb_reset(
+		signal clk		: in	std_logic;
+		signal m_out	: out	wb_master_out_type);
 	
 	procedure wb_naive_connect(
-		signal s_cyc_i	: in std_logic;
-		signal s_stb_i	: in std_logic;
-		signal s_ack_o	: out std_logic;
-		signal s_we_i	: in std_logic;
-		signal s_adr_i	: in std_logic;
-		signal s_dat_i	: in std_logic_vector(S_DATA_SIZE-1 downto 0);
-		signal s_dat_o	: out std_logic_vector(S_DATA_SIZE-1 downto 0);
-		signal m_in	: out wb_master_in_type;
-		signal m_out : in wb_master_out_type);
+		signal s_cyc_i	: out	std_logic;
+		signal s_stb_i	: out	std_logic;
+		signal s_ack_o	: in	std_logic;
+		signal s_we_i	: out	std_logic;
+		signal s_adr_i	: out	std_logic_vector(S_ADDR_SIZE-1 downto 0);
+		signal s_dat_i	: out	std_logic_vector(S_DATA_SIZE-1 downto 0);
+		signal s_dat_o	: in	std_logic_vector(S_DATA_SIZE-1 downto 0);
+		signal m_in		: out	wb_master_in_type;
+		signal m_out 	: in	wb_master_out_type);
 
 	procedure wb_write(
 		signal clk : in std_logic;
@@ -121,6 +125,13 @@ package wb_pack is
 		variable data : out natural;
 		signal wb_in	: in wb_master_in_type;
 		signal wb_out : out wb_master_out_type);
+	
+	procedure wb_confirme_write(
+		signal clk 		: in	std_logic;
+		constant addr 	: in	natural;
+		constant data 	: in	natural;
+		signal wb_in	: in	wb_master_in_type;
+		signal wb_out	: out	wb_master_out_type);
 
 end wb_pack;
 
@@ -134,7 +145,7 @@ package body wb_pack is
 
 	begin
 
-		s_in.dat_i <= m_out.dat_o;
+		s_in.dat_i <= m_out.dat_o(S_DATA_SIZE-1 downto 0);
 		s_in.we_i <= m_out.we_o;
 		s_in.adr_i <= m_out.adr_o(S_ADDR_SIZE-1 downto 0);
 		s_in.cyc_i <= m_out.cyc_o;
@@ -144,6 +155,43 @@ package body wb_pack is
 		m_in.ack_i <= s_out.ack_o;
 
 	end;
+	
+	procedure wb_reset(
+		signal clk		: in std_logic;
+		signal m_out	: out wb_master_out_type) is
+	begin
+		wait until rising_edge(clk);
+		m_out.dat_o <= (others => '0');
+		m_out.adr_o	<= (others => '0');
+		m_out.we_o 	<= '0';
+		m_out.cyc_o	<= '0';
+		m_out.stb_o	<= '0';
+	end;
+	
+	procedure wb_naive_connect(
+		signal s_cyc_i	: out	std_logic;
+		signal s_stb_i	: out	std_logic;
+		signal s_ack_o	: in	std_logic;
+		signal s_we_i	: out	std_logic;
+		signal s_adr_i	: out	std_logic_vector(S_ADDR_SIZE-1 downto 0);
+		signal s_dat_i	: out	std_logic_vector(S_DATA_SIZE-1 downto 0);
+		signal s_dat_o	: in	std_logic_vector(S_DATA_SIZE-1 downto 0);
+		signal m_in		: out	wb_master_in_type;
+		signal m_out 	: in	wb_master_out_type) is
+	
+	begin
+		
+		s_cyc_i 	<= m_out.cyc_o;
+		s_stb_i		<= m_out.stb_o;
+		s_we_i		<= m_out.we_o;
+		s_adr_i		<= m_out.adr_o;
+		s_dat_i		<= m_out.dat_o;
+		
+		m_in.dat_i 	<= s_dat_o;
+		m_in.ack_i 	<= s_ack_o;
+		
+	end;
+		
 
 	procedure wb_write(
 		signal clk : in std_logic;
@@ -245,6 +293,26 @@ package body wb_pack is
 
 		writeline(output, txt);
 
+	end;
+	
+	procedure wb_confirme_write(
+		signal clk 		: in	std_logic;
+		constant addr 	: in	natural;
+		constant data 	: in	natural;
+		signal wb_in	: in	wb_master_in_type;
+		signal wb_out	: out	wb_master_out_type) is
+	
+		variable wb_data_read : natural;
+	begin
+		
+		wb_write(clk, addr, data, wb_in, wb_out);
+		
+		wb_read(clk, addr, wb_data_read, wb_in, wb_out);
+		
+		assert wb_data_read = data
+			report "not the same written as read"
+				severity error;
+		
 	end;
 
 
